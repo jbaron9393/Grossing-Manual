@@ -863,27 +863,10 @@ function renderSiteDocsNav(siteDocs) {
     const list = document.createElement("div");
     list.className = "doc-list";
 
-    const groupedItems = groupDocsBySubgroup(items);
-    for (const subgroup of groupedItems) {
-      const subgroupEl = document.createElement("div");
-      const hasActiveDoc = subgroup.docs.some((doc) => doc.path === activeSiteDocPath);
-      subgroupEl.className = "subgroup" + (hasActiveDoc ? " open" : "");
+    const useSubgroups = cat === "GYN-OB 1&2";
 
-      const subgroupHead = document.createElement("div");
-      subgroupHead.className = "subgroup-head";
-      subgroupHead.innerHTML = `
-        <span>${escapeHtml(subgroup.name)}</span>
-        <span class="cat-count">${subgroup.docs.length}</span>
-      `;
-      subgroupHead.addEventListener("click", () => {
-        subgroupEl.classList.toggle("open");
-      });
-      subgroupEl.appendChild(subgroupHead);
-
-      const subgroupBody = document.createElement("div");
-      subgroupBody.className = "subgroup-body";
-
-      for (const doc of subgroup.docs) {
+    if (!useSubgroups) {
+      for (const doc of items) {
         const item = document.createElement("div");
         item.className = "doc-item" + (doc.path === activeSiteDocPath ? " active" : "");
         item.innerHTML = `
@@ -893,11 +876,45 @@ function renderSiteDocsNav(siteDocs) {
           </div>
         `;
         item.addEventListener("click", () => loadSiteDoc(doc));
-        subgroupBody.appendChild(item);
+        list.appendChild(item);
       }
+    } else {
+      const groupedItems = groupDocsBySubgroup(items);
+      for (const subgroup of groupedItems) {
+        const subgroupEl = document.createElement("div");
+        const hasActiveDoc = subgroup.docs.some((doc) => doc.path === activeSiteDocPath);
+        subgroupEl.className = "subgroup" + (hasActiveDoc ? " open" : "");
 
-      subgroupEl.appendChild(subgroupBody);
-      list.appendChild(subgroupEl);
+        const subgroupHead = document.createElement("div");
+        subgroupHead.className = "subgroup-head";
+        subgroupHead.innerHTML = `
+          <span>${escapeHtml(subgroup.name)}</span>
+          <span class="cat-count">${subgroup.docs.length}</span>
+        `;
+        subgroupHead.addEventListener("click", () => {
+          subgroupEl.classList.toggle("open");
+        });
+        subgroupEl.appendChild(subgroupHead);
+
+        const subgroupBody = document.createElement("div");
+        subgroupBody.className = "subgroup-body";
+
+        for (const doc of subgroup.docs) {
+          const item = document.createElement("div");
+          item.className = "doc-item" + (doc.path === activeSiteDocPath ? " active" : "");
+          item.innerHTML = `
+            <div class="doc-meta">
+              <div class="doc-title">${escapeHtml(doc.title)}</div>
+              <div class="doc-sub">${escapeHtml(doc.fileName)}</div>
+            </div>
+          `;
+          item.addEventListener("click", () => loadSiteDoc(doc));
+          subgroupBody.appendChild(item);
+        }
+
+        subgroupEl.appendChild(subgroupBody);
+        list.appendChild(subgroupEl);
+      }
     }
 
     catEl.appendChild(head);
