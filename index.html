@@ -318,8 +318,12 @@
 
 .search-hit {
   background: #fff09b;
-  color: #222;
-  padding: 0 1px;
+  color: inherit;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  font-weight: inherit;
 }
 
 .search-hit.active {
@@ -432,6 +436,9 @@
     body.dark .category > .cat-head,
     body.dark .doc-item {
       border-color: #303947;
+    }
+    body.dark .panel-header {
+      color: #fff;
     }
     body.dark .category > .cat-head,
     body.dark .preview {
@@ -1195,19 +1202,31 @@ function renderOutputRichText(html) {
     p.replaceWith(line);
   }
 
-  const hasUterusTemplateHeading = Array.from(container.querySelectorAll("p, h1, h2, h3, h4"))
-    .some((el) => /UTERUS\s+DICTATION\s+TEMPLATE/i.test(el.textContent || ""));
+  const templateLinePattern = /^[\-–•]\s+/;
+  const paragraphs = Array.from(container.querySelectorAll("p"));
+  const compactRuns = [];
+  let run = [];
 
-  if (hasUterusTemplateHeading) {
-    for (const p of container.querySelectorAll("p")) {
-      const text = (p.textContent || "").trim();
-      if (!text.startsWith("- ")) continue;
+  const flushRun = () => {
+    if (run.length >= 3) compactRuns.push(...run);
+    run = [];
+  };
 
-      const line = document.createElement("div");
-      line.className = "subline";
-      while (p.firstChild) line.appendChild(p.firstChild);
-      p.replaceWith(line);
+  for (const p of paragraphs) {
+    const text = (p.textContent || "").trim();
+    if (templateLinePattern.test(text)) {
+      run.push(p);
+    } else {
+      flushRun();
     }
+  }
+  flushRun();
+
+  for (const p of compactRuns) {
+    const line = document.createElement("div");
+    line.className = "subline";
+    while (p.firstChild) line.appendChild(p.firstChild);
+    p.replaceWith(line);
   }
 
   return container.innerHTML;
