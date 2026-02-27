@@ -292,7 +292,7 @@
 .preview h3 {
   margin: 14px 0 8px;
 }
-    
+
     /* Preserve DOCX list/indent readability despite global reset */
     .preview ul,
     .preview ol {
@@ -451,17 +451,11 @@
     <div class="panel left">
       <div class="panel-header">
         <span>Library</span>
-        <span class="muted" id="libStatus">0 uploaded</span>
+        <span class="muted" id="libStatus">0 docs / 0 categories</span>
       </div>
 
       <div class="panel-body">
         <div class="row">
-          <label>Site Documents (from <code>/docs/word-docs</code>)</label>
-          <div class="muted">
-            Add <code>.docx</code> files to <code>/docs/word-docs</code>, then define each doc's
-            <code>fileName</code>, <code>title</code>, and <code>category</code> in
-            <code>/docs/word-docs/index.json</code>. They appear grouped by category on page load.
-          </div>
           <div class="nav" id="siteDocsNav"></div>
         </div>
 
@@ -495,6 +489,16 @@
         <hr style="border:none;border-top:1px solid #eee;margin:14px 0;" />
 
         <div class="nav" id="nav"></div>
+        <hr style="border:none;border-top:1px solid #eee;margin:14px 0;" />
+
+        <div class="row" style="margin-bottom:0;">
+          <label>Site Documents (from <code>/docs/word-docs</code>)</label>
+          <div class="muted">
+            Add <code>.docx</code> files to <code>/docs/word-docs</code>, then define each doc's
+            <code>fileName</code>, <code>title</code>, and <code>category</code> in
+            <code>/docs/word-docs/index.json</code>. They appear grouped by category on page load.
+          </div>
+        </div>
       </div>
 
       <div class="footer-note">
@@ -575,6 +579,7 @@ let activeSiteDocPath = null;
 let searchMatches = [];
 let activeSearchIndex = -1;
 let topButtonHideTimer = null;
+let bundledStats = { docs: 0, categories: 0 };
 
 // -------------------- Utilities --------------------
 function uuid() {
@@ -640,6 +645,10 @@ function groupByCategory(docs) {
     out.push([cat, items]);
   }
   return out;
+}
+
+function setLibraryStatus() {
+  libStatusEl.textContent = `${bundledStats.docs} docs / ${bundledStats.categories} categories`;
 }
 
 function getSubgroupLabel(doc) {
@@ -723,7 +732,6 @@ async function copyToClipboard(text) {
 function renderNav() {
   navEl.innerHTML = "";
   const docs = state.docs || [];
-  libStatusEl.textContent = `${docs.length} uploaded`;
 
   if (!docs.length) {
     navEl.innerHTML = `<div class="muted">No documents yet. Upload one above.</div>`;
@@ -1032,7 +1040,7 @@ async function loadSiteDoc(doc) {
   renderNav();
 
   previewTitleEl.textContent = doc.title;
-  previewMetaEl.textContent = `Bundled doc • ${doc.fileName}`;
+  previewMetaEl.textContent = `Library • ${doc.fileName}`;
   selectionNoteEl.textContent = `Selected bundled doc: ${doc.title}`;
   setPreviewHtml(`<div class="muted">Rendering…</div>`);
 
@@ -1090,8 +1098,12 @@ async function loadBundledDocs() {
         path: buildBundledDocPath(doc.fileName)
       }));
 
+    bundledStats = { docs: docs.length, categories: new Set(docs.map((d) => d.category || "Uncategorized")).size };
+    setLibraryStatus();
     renderSiteDocsNav(docs);
   } catch {
+    bundledStats = { docs: 0, categories: 0 };
+    setLibraryStatus();
     renderSiteDocsNav([]);
   }
 }
@@ -1271,6 +1283,7 @@ previewSearchEl.addEventListener("keydown", (e) => {
 
 // Initial render
 renderNav();
+setLibraryStatus();
 loadBundledDocs();
 setTheme(localStorage.getItem(THEME_KEY) || "light");
 updateToTopVisibility();
