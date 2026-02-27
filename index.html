@@ -482,6 +482,12 @@
 
       <div class="panel-body">
         <div class="row">
+          <label for="leftSearch">Find specimen / doc in library</label>
+          <input id="leftSearch" type="text" placeholder="e.g., appendix, gallbladder" />
+          <div class="muted" id="leftSearchMeta"></div>
+        </div>
+
+        <div class="row">
           <div class="nav" id="siteDocsNav"></div>
         </div>
 
@@ -587,6 +593,8 @@ const navEl = $("#nav");
 const siteDocsNavEl = $("#siteDocsNav");
 const errEl = $("#err");
 const libStatusEl = $("#libStatus");
+const leftSearchEl = $("#leftSearch");
+const leftSearchMetaEl = $("#leftSearchMeta");
 
 const previewEl = $("#preview");
 const previewTitleEl = $("#previewTitle");
@@ -608,6 +616,8 @@ let searchMatchGroups = [];
 let activeSearchIndex = -1;
 let topButtonHideTimer = null;
 let bundledStats = { docs: 0, categories: 0 };
+let bundledDocs = [];
+let leftSearchQuery = "";
 
 // -------------------- Utilities --------------------
 function uuid() {
@@ -677,6 +687,30 @@ function groupByCategory(docs) {
 
 function setLibraryStatus() {
   libStatusEl.textContent = `${bundledStats.docs} docs / ${bundledStats.categories} categories`;
+}
+
+
+function normalizeSearchValue(value) {
+  return (value || "").toString().trim().toLowerCase();
+}
+
+function matchesLeftSearch(doc) {
+  if (!leftSearchQuery) return true;
+  const haystack = [doc.title, doc.fileName, doc.category]
+    .map((value) => (value || "").toString().toLowerCase())
+    .join(" ");
+  return haystack.includes(leftSearchQuery);
+}
+
+function updateLeftSearchMeta() {
+  if (!leftSearchQuery) {
+    leftSearchMetaEl.textContent = "";
+    return;
+  }
+
+  const bundledCount = bundledDocs.filter(matchesLeftSearch).length;
+  const uploadedCount = (state.docs || []).filter(matchesLeftSearch).length;
+  leftSearchMetaEl.textContent = `${bundledCount + uploadedCount} matches (${bundledCount} bundled, ${uploadedCount} uploaded)`;
 }
 
 function getSubgroupLabel(doc) {
@@ -786,10 +820,11 @@ async function copyToClipboard(text) {
 // -------------------- Rendering --------------------
 function renderNav() {
   navEl.innerHTML = "";
-  const docs = state.docs || [];
+  const docs = (state.docs || []).filter(matchesLeftSearch);
 
   if (!docs.length) {
     navEl.innerHTML = `<div class="muted">No documents yet. Upload one above.</div>`;
+    updateLeftSearchMeta();
     return;
   }
 
@@ -806,6 +841,7 @@ function renderNav() {
       <span class="cat-count">${items.length}</span>
     `;
     head.addEventListener("click", () => toggleCategory(catEl, navEl));
+    if (leftSearchQuery) catEl.classList.add("open");
 
     const list = document.createElement("div");
     list.className = "doc-list";
@@ -843,9 +879,12 @@ function renderNav() {
     catEl.appendChild(list);
     navEl.appendChild(catEl);
   }
+
+  updateLeftSearchMeta();
 }
 
 function renderSiteDocsNav(siteDocs) {
+  const visibleDocs = siteDocs.filter(matchesLeftSearch);
   siteDocsNavEl.innerHTML = "";
 
   if (!siteDocs.length) {
@@ -853,7 +892,12 @@ function renderSiteDocsNav(siteDocs) {
     return;
   }
 
-  const groups = groupByCategory(siteDocs);
+  if (!visibleDocs.length) {
+    siteDocsNavEl.innerHTML = `<div class="muted">No bundled docs match your search.</div>`;
+    return;
+  }
+
+  const groups = groupByCategory(visibleDocs);
 
   for (const [cat, items] of groups) {
     const catEl = document.createElement("div");
@@ -866,6 +910,7 @@ function renderSiteDocsNav(siteDocs) {
       <span class="cat-count">${items.length}</span>
     `;
     head.addEventListener("click", () => toggleCategory(catEl, siteDocsNavEl));
+    if (leftSearchQuery) catEl.classList.add("open");
 
     const list = document.createElement("div");
     list.className = "doc-list";
@@ -988,7 +1033,6 @@ function clearPreviewSearch() {
   clearSearchHighlights();
   updateFloatingSearchClear();
 }
-
 
 function updateSearchMeta() {
   if (!previewSearchEl.value.trim()) {
@@ -1217,13 +1261,17 @@ async function loadBundledDocs() {
         path: buildBundledDocPath(doc.fileName)
       }));
 
+    bundledDocs = docs;
     bundledStats = { docs: docs.length, categories: new Set(docs.map((d) => d.category || "Uncategorized")).size };
     setLibraryStatus();
     renderSiteDocsNav(docs);
+    updateLeftSearchMeta();
   } catch {
+    bundledDocs = [];
     bundledStats = { docs: 0, categories: 0 };
     setLibraryStatus();
     renderSiteDocsNav([]);
+    updateLeftSearchMeta();
   }
 }
 
@@ -1381,6 +1429,12 @@ $("#importFile").addEventListener("change", (e) => {
 });
 
 $("#btnCopyText").addEventListener("click", copyPlainText);
+leftSearchEl.addEventListener("input", () => {
+  leftSearchQuery = normalizeSearchValue(leftSearchEl.value);
+  renderNav();
+  renderSiteDocsNav(bundledDocs);
+  updateLeftSearchMeta();
+});
 btnToTopEl.addEventListener("click", scrollToTop);
 previewEl.addEventListener("scroll", updateToTopVisibility);
 window.addEventListener("scroll", updateToTopVisibility);
@@ -1412,6 +1466,7 @@ loadBundledDocs();
 setTheme(localStorage.getItem(THEME_KEY) || "light");
 updateToTopVisibility();
 updateFloatingSearchClear();
+updateLeftSearchMeta();
 </script>
 </body>
 </html>
