@@ -1372,7 +1372,7 @@ $("#btnSearchClear").addEventListener("click", () => {
   previewSearchEl.value = "";
   clearSearchHighlights();
 });
-previewSearchEl.addEventListener("input", refreshSearchHighlights);
+previewSearchEl.addEventListener("input", () => refreshSearchHighlights(false));
 previewSearchEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
