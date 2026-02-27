@@ -285,7 +285,7 @@
       cursor:pointer;
     }
     .note-highlight {
-      animation: notePulse 1.3s ease;
+      animation: notePulse 2.2s ease;
       outline: 3px solid rgba(207,184,124,.8);
       border-radius: 4px;
     }
@@ -505,6 +505,20 @@
       padding: 7px 11px;
       font-size: .82rem;
     }
+    .quick-note-float {
+      bottom: 112px;
+      font-size: .82rem;
+      padding: 7px 11px;
+    }
+    .note-category-chip {
+      font-size: .72rem;
+      font-weight: 700;
+      border: 1px solid #d8c28a;
+      color: #735b22;
+      background: #fff8e7;
+      border-radius: 999px;
+      padding: 1px 7px;
+    }
 
     body.dark {
       background: #101317;
@@ -589,6 +603,11 @@
       background: rgba(23,29,38,.96);
       border-color: #CFB87C;
       color: #CFB87C;
+    }
+    body.dark .note-category-chip {
+      background: #3a3528;
+      border-color: #7e6b3a;
+      color: #f0dca8;
     }
     body.dark .btn.secondary:hover,
     body.dark .icon-btn:hover {
@@ -771,6 +790,7 @@
   </div>
 
   <button class="to-top-btn clear-search-float hidden" id="btnClearSearchFloat" aria-label="Clear search">✕ Search</button>
+  <button class="to-top-btn quick-note-float hidden" id="btnQuickNote" aria-label="Add note from selected text">📝 Add Note</button>
   <button class="to-top-btn hidden" id="btnToTop" aria-label="Return to top">↑ Top</button>
 
   <div class="modal-backdrop" id="noteModalBackdrop" aria-hidden="true">
@@ -778,6 +798,17 @@
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
         <strong id="noteModalTitle">New Note</strong>
         <button class="btn secondary compact" id="btnNoteClose">Close</button>
+      </div>
+      <div class="row two" style="margin-bottom:0;">
+        <div>
+          <label for="noteTitle">Title/Label</label>
+          <input id="noteTitle" type="text" placeholder="e.g., Margin note" />
+        </div>
+        <div>
+          <label for="noteCategory">Note Category</label>
+          <input id="noteCategory" type="text" list="noteCategoryList" placeholder="e.g., Grossing, Follow-up" />
+          <datalist id="noteCategoryList"></datalist>
+        </div>
       </div>
       <textarea id="noteText" placeholder="Write your note..."></textarea>
       <div class="modal-row" style="justify-content:flex-end;">
@@ -840,6 +871,7 @@ const previewSearchEl = $("#previewSearch");
 const searchMetaEl = $("#searchMeta");
 const btnToTopEl = $("#btnToTop");
 const btnClearSearchFloatEl = $("#btnClearSearchFloat");
+const btnQuickNoteEl = $("#btnQuickNote");
 const btnAddNoteEl = $("#btnAddNote");
 const btnNewNoteEl = $("#btnNewNote");
 
@@ -850,6 +882,9 @@ const docTypeEl = $("#docType");
 
 const noteModalBackdropEl = $("#noteModalBackdrop");
 const noteModalTitleEl = $("#noteModalTitle");
+const noteTitleEl = $("#noteTitle");
+const noteCategoryEl = $("#noteCategory");
+const noteCategoryListEl = $("#noteCategoryList");
 const noteTextEl = $("#noteText");
 
 let state = loadLibrary();
@@ -968,9 +1003,37 @@ function loadNotesOverlay() {
     const raw = localStorage.getItem(NOTES_KEY);
     if (!raw) return { notes: [] };
     const parsed = JSON.parse(raw);
-    return { notes: Array.isArray(parsed?.notes) ? parsed.notes : [] };
+    const notes = Array.isArray(parsed?.notes) ? parsed.notes.map(normalizeNote) : [];
+    return { notes };
   } catch {
     return { notes: [] };
+  }
+}
+
+function normalizeNote(note = {}) {
+  return {
+    ...note,
+    title: (note.title || '').toString().trim(),
+    category: (note.category || 'General').toString().trim() || 'General'
+  };
+}
+
+function uniqueNoteCategories() {
+  const categories = new Set(['General']);
+  for (const note of notesOverlay.notes || []) {
+    const category = (note?.category || '').toString().trim();
+    if (category) categories.add(category);
+  }
+  return [...categories].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+function refreshNoteCategorySuggestions() {
+  if (!noteCategoryListEl) return;
+  noteCategoryListEl.innerHTML = '';
+  for (const category of uniqueNoteCategories()) {
+    const opt = document.createElement('option');
+    opt.value = category;
+    noteCategoryListEl.appendChild(opt);
   }
 }
 
@@ -1104,11 +1167,14 @@ function renderNotesList() {
     const row = document.createElement('div');
     row.className = 'note-item';
     const timestamp = new Date(note.updatedAtISO || note.createdAtISO || Date.now()).toLocaleString();
+    const title = (note.title || '').trim();
+    const category = (note.category || 'General').trim() || 'General';
     row.innerHTML = `
-      <div class="note-item-head"><span>Note</span><span>${escapeHtml(timestamp)}</span></div>
-      <div class="note-preview">${escapeHtml((note.text || '').split('\n')[0] || '(empty note)')}</div>
+      <div class="note-item-head"><span class="note-category-chip">${escapeHtml(category)}</span><span>${escapeHtml(timestamp)}</span></div>
+      <div class="note-preview">${escapeHtml(title || (note.text || '').split('\n')[0] || '(empty note)')}</div>
+      ${title ? `<div class="muted">${escapeHtml((note.text || '').split('\n')[0] || '(empty note)')}</div>` : ''}
       <div class="note-actions">
-        <button class="btn secondary compact" data-action="pin">Pin</button>
+        <button class="btn secondary compact" data-action="pin">Jump To Note</button>
         <button class="btn secondary compact" data-action="edit">Edit</button>
         <button class="btn secondary compact" data-action="delete">Delete</button>
       </div>
@@ -1136,9 +1202,12 @@ function openNoteModal({ mode = 'create', note = null, capturedAnchor = null } =
 
   noteEditorState = { mode, noteId: note?.id || null, capturedAnchor: capturedAnchor || null };
   noteModalTitleEl.textContent = mode === 'edit' ? 'Edit Note' : 'New Note';
+  noteTitleEl.value = note?.title || '';
+  noteCategoryEl.value = note?.category || 'General';
+  refreshNoteCategorySuggestions();
   noteTextEl.value = note?.text || '';
   noteModalBackdropEl.classList.add('open');
-  noteTextEl.focus();
+  noteTitleEl.focus();
 }
 
 function closeNoteModal() {
@@ -1151,12 +1220,15 @@ function deleteNote(noteId) {
   saveNotesOverlay();
   renderNotesList();
   renderNoteMarkers();
+  refreshNoteCategorySuggestions();
 }
 
 function saveNoteFromModal() {
   const ctx = getActiveDocContext();
   if (!ctx) return;
   const text = (noteTextEl.value || '').trim();
+  const title = (noteTitleEl.value || '').trim();
+  const category = (noteCategoryEl.value || '').trim() || 'General';
   if (!text) {
     alert('Please add note text.');
     return;
@@ -1167,6 +1239,8 @@ function saveNoteFromModal() {
   if (noteEditorState.mode === 'edit' && noteEditorState.noteId) {
     const found = notesOverlay.notes.find((n) => n.id === noteEditorState.noteId);
     if (found) {
+      found.title = title;
+      found.category = category;
       found.text = text;
       const updatedAnchor = createAnchorFromSelection();
       if (updatedAnchor) found.anchor = updatedAnchor;
@@ -1186,6 +1260,8 @@ function saveNoteFromModal() {
       docKey: ctx.docKey,
       docTitle: ctx.docTitle,
       anchor,
+      title,
+      category,
       text,
       tags: [],
       createdAtISO: stamp,
@@ -1197,12 +1273,13 @@ function saveNoteFromModal() {
   closeNoteModal();
   renderNotesList();
   renderNoteMarkers();
+  refreshNoteCategorySuggestions();
 }
 
 function highlightAnchorElement(el) {
   if (!el) return;
   el.classList.add('note-highlight');
-  setTimeout(() => el.classList.remove('note-highlight'), 1500);
+  setTimeout(() => el.classList.remove('note-highlight'), 2500);
 }
 
 function normalizeTextForMatch(value = '') {
@@ -1342,10 +1419,15 @@ function renderNoteMarkers() {
 
 function updateAddNoteButtonState() {
   const hasDoc = !!getActiveDocContext();
-  if (!btnAddNoteEl) return;
-  btnAddNoteEl.disabled = !hasDoc;
   const hasSelection = !!getCurrentSelectionInfo();
-  btnAddNoteEl.textContent = hasSelection ? 'Add Note to Selection' : 'Add Note';
+  if (btnAddNoteEl) {
+    btnAddNoteEl.disabled = !hasDoc;
+    btnAddNoteEl.textContent = hasSelection ? 'Add Note to Selection' : 'Add Note';
+  }
+
+  if (!btnQuickNoteEl) return;
+  const canQuickAdd = hasDoc && hasSelection && previewContentType === 'docx';
+  btnQuickNoteEl.classList.toggle('hidden', !canQuickAdd);
 }
 
 
@@ -2217,7 +2299,7 @@ function importLibraryFromFile(file) {
         const nextId = existingNoteIds.has(note.id) ? uuid() : (note.id || uuid());
         if (existingNoteIds.has(nextId)) continue;
         existingNoteIds.add(nextId);
-        notesOverlay.notes.push({
+        notesOverlay.notes.push(normalizeNote({
           id: nextId,
           docKey: note.docKey || '',
           docTitle: note.docTitle || 'Untitled',
@@ -2229,11 +2311,13 @@ function importLibraryFromFile(file) {
             contextAfter: note.anchor?.contextAfter || '',
             scrollTop: typeof note.anchor?.scrollTop === 'number' ? note.anchor.scrollTop : 0
           },
+          title: (note.title || '').toString(),
+          category: (note.category || 'General').toString() || 'General',
           text: (note.text || '').toString(),
           tags: Array.isArray(note.tags) ? note.tags : [],
           createdAtISO: note.createdAtISO || nowISO(),
           updatedAtISO: note.updatedAtISO || nowISO()
-        });
+        }));
         importedNotes += 1;
       }
 
@@ -2243,6 +2327,7 @@ function importLibraryFromFile(file) {
       renderNav();
       renderNotesList();
       renderNoteMarkers();
+      refreshNoteCategorySuggestions();
       alert(`Imported ${normalizedDocs.length} doc(s) and ${importedNotes} note(s).`);
     } catch (e) {
       alert(`Import failed: ${e.message || e}`);
@@ -2256,6 +2341,15 @@ async function copyPlainText() {
   const text = previewEl.innerText || "";
   await copyToClipboard(text);
   alert("Copied plain text.");
+}
+
+function openCreateNoteFromSelection() {
+  const capturedAnchor = createAnchorFromSelection();
+  if (!capturedAnchor) {
+    alert('Highlight text in the preview first, then click Add Note.');
+    return;
+  }
+  openNoteModal({ mode: 'create', capturedAnchor });
 }
 
 function updateToTopVisibility() {
@@ -2353,22 +2447,9 @@ $("#importFile").addEventListener("change", (e) => {
 
 $("#btnCopyText").addEventListener("click", copyPlainText);
 
-btnAddNoteEl.addEventListener("click", () => {
-  const capturedAnchor = createAnchorFromSelection();
-  if (!capturedAnchor) {
-    alert('Highlight text in the preview first, then click Add Note.');
-    return;
-  }
-  openNoteModal({ mode: 'create', capturedAnchor });
-});
-btnNewNoteEl.addEventListener("click", () => {
-  const capturedAnchor = createAnchorFromSelection();
-  if (!capturedAnchor) {
-    alert('Highlight text in the preview first, then click Add Note.');
-    return;
-  }
-  openNoteModal({ mode: 'create', capturedAnchor });
-});
+btnAddNoteEl.addEventListener("click", openCreateNoteFromSelection);
+btnNewNoteEl.addEventListener("click", openCreateNoteFromSelection);
+btnQuickNoteEl.addEventListener("click", openCreateNoteFromSelection);
 notesShowAllEl.addEventListener("change", renderNotesList);
 notesHeadEl.addEventListener("click", () => {
   notesCategoryEl.classList.toggle("open");
@@ -2384,6 +2465,8 @@ noteModalBackdropEl.addEventListener("click", (e) => {
 document.addEventListener("selectionchange", () => {
   updateAddNoteButtonState();
 });
+previewEl.addEventListener("mouseup", updateAddNoteButtonState);
+previewEl.addEventListener("keyup", updateAddNoteButtonState);
 leftSearchEl.addEventListener("input", () => {
   leftSearchQuery = normalizeSearchValue(leftSearchEl.value);
   if (leftSearchQuery) queueLeftSearchIndexAll();
@@ -2422,6 +2505,7 @@ updateFloatingSearchClear();
 updateLeftSearchMeta();
 initPanelResizer();
 renderNotesList();
+refreshNoteCategorySuggestions();
 updateAddNoteButtonState();
 </script>
 </body>
