@@ -179,26 +179,30 @@
     }
     .icon-btn:hover { background:#f3f3f3; }
 
-    /* Right preview area */
-    .preview {
-      padding: 16px;
-      background: #fafafa;
-      border: 1px solid #eee;
-      border-radius: 10px;
-      overflow: auto;
-      min-height: 0;
-      line-height: 1.3; /* Word-like single spacing */
-    }
-    
-    .preview p {
-      margin: 10px 0; /* tighter paragraph spacing */
-    }
-    
-    .preview h1,
-    .preview h2,
-    .preview h3 {
-      margin: 14px 0 10px; /* tighter heading spacing */
-    }
+.preview {
+  padding: 16px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  overflow: auto;
+  min-height: 0;
+  line-height: 1.2;
+}
+
+.preview p {
+  margin: 6px 0;
+}
+
+/* Tighten consecutive lines (like submission lists) */
+.preview p + p {
+  margin-top: 2px;
+}
+
+.preview h1,
+.preview h2,
+.preview h3 {
+  margin: 14px 0 8px;
+}
     
     /* Preserve DOCX list/indent readability despite global reset */
     .preview ul,
