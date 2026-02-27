@@ -237,8 +237,22 @@
       line-height: 1.25;
     }
 
-    .notes-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .notes-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom: 8px; }
     .notes-list { display:flex; flex-direction:column; gap:8px; max-height:280px; overflow:auto; }
+    .notes-category .cat-head::after {
+      content: "▸";
+      font-size: .72rem;
+      opacity: .85;
+      transition: transform .14s ease;
+    }
+    .notes-category.open .cat-head::after {
+      transform: rotate(90deg);
+    }
+    .notes-body {
+      padding: 8px 8px 10px 8px;
+      background: #fff;
+      border-top: 1px solid #efefef;
+    }
     .note-item {
       border:1px solid #ececec;
       border-radius:10px;
@@ -594,6 +608,10 @@
       color: #f0f4f9;
       border-color: #3d4a5c;
     }
+    body.dark .notes-body {
+      background: #1b212a;
+      border-top-color: #303947;
+    }
     body.dark .panel-resizer {
       background: linear-gradient(180deg, rgba(207,184,124,.22), rgba(207,184,124,.4));
       border-color: rgba(207,184,124,.6);
@@ -698,6 +716,27 @@
             Add files to <code>/docs/word-docs</code>, then define each doc's
             <code>fileName</code>, <code>title</code>, and <code>category</code> in
             <code>/docs/word-docs/index.json</code>. They appear grouped by category on page load.
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid #eee;margin:14px 0;" />
+
+        <div class="category notes-category" id="notesCategory">
+          <div class="cat-head" id="notesHead">
+            <span class="cat-head-title">Notes</span>
+            <span class="cat-count" id="notesCount">0</span>
+          </div>
+          <div class="doc-list" id="notesListWrap">
+            <div class="notes-body">
+              <div class="notes-toolbar">
+                <button class="btn secondary compact" id="btnNewNote">+ New Note</button>
+                <label style="display:flex;align-items:center;gap:6px;font-weight:600;">
+                  <input id="notesShowAll" type="checkbox" />
+                  <span>All notes</span>
+                </label>
+              </div>
+              <div class="notes-list" id="notesList"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -811,6 +850,9 @@ const leftSearchEl = $("#leftSearch");
 const leftSearchMetaEl = $("#leftSearchMeta");
 const notesListEl = $("#notesList");
 const notesShowAllEl = $("#notesShowAll");
+const notesCategoryEl = $("#notesCategory");
+const notesHeadEl = $("#notesHead");
+const notesCountEl = $("#notesCount");
 
 const previewEl = $("#preview");
 const previewTitleEl = $("#previewTitle");
@@ -1122,6 +1164,8 @@ function renderNotesList() {
     .slice()
     .sort((a, b) => (Number(b.pinned) - Number(a.pinned)) || (new Date(b.updatedAtISO) - new Date(a.updatedAtISO)));
 
+  if (notesCountEl) notesCountEl.textContent = String(items.length);
+
   if (!items.length) {
     notesListEl.innerHTML = '<div class="muted">No notes yet for this view.</div>';
     return;
@@ -1232,13 +1276,40 @@ function highlightAnchorElement(el) {
   setTimeout(() => el.classList.remove('note-highlight'), 1500);
 }
 
-function findElementByQuote(quote = '') {
-  const wanted = (quote || '').trim().toLowerCase();
+function normalizeTextForMatch(value = '') {
+  return value.toString().replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function findElementByQuote(quote = '', contextBefore = '', contextAfter = '') {
+  const wanted = normalizeTextForMatch(quote);
   if (!wanted) return null;
+
+  const candidates = Array.from(previewEl.querySelectorAll('.preview-inner h1, .preview-inner h2, .preview-inner h3, .preview-inner p, .preview-inner li, .preview-inner div, .preview-inner td, .preview-inner th, .preview-inner blockquote'));
+  let best = null;
+  let bestScore = -1;
+
+  for (const el of candidates) {
+    const hay = normalizeTextForMatch(el.innerText || el.textContent || '');
+    if (!hay || !hay.includes(wanted)) continue;
+
+    let score = wanted.length;
+    const before = normalizeTextForMatch(contextBefore);
+    const after = normalizeTextForMatch(contextAfter);
+    if (before && hay.includes(before)) score += 25;
+    if (after && hay.includes(after)) score += 25;
+
+    if (score > bestScore) {
+      best = el;
+      bestScore = score;
+    }
+  }
+
+  if (best) return best;
+
   const walker = document.createTreeWalker(previewEl, NodeFilter.SHOW_TEXT, null);
   let node;
   while ((node = walker.nextNode())) {
-    const text = (node.nodeValue || '').toLowerCase();
+    const text = normalizeTextForMatch(node.nodeValue || '');
     if (text.includes(wanted)) return node.parentElement;
   }
   return null;
@@ -1252,7 +1323,11 @@ function jumpToNote(note) {
   if (anchor.selector) {
     try { target = previewEl.querySelector(anchor.selector); } catch {}
   }
-  if (!target && anchor.quote) target = findElementByQuote(anchor.quote);
+  if (!target && anchor.quote) target = findElementByQuote(anchor.quote, anchor.contextBefore, anchor.contextAfter);
+
+  if (!target && anchor.type === 'heading' && anchor.quote) {
+    target = findElementByQuote(anchor.quote);
+  }
 
   if (target) {
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2311,6 +2386,9 @@ btnAddNoteEl.addEventListener("click", () => {
 });
 btnNewNoteEl.addEventListener("click", () => openNoteModal({ mode: 'create', suggestedAnchorType: 'scroll' }));
 notesShowAllEl.addEventListener("change", renderNotesList);
+notesHeadEl.addEventListener("click", () => {
+  notesCategoryEl.classList.toggle("open");
+});
 
 $("#btnNoteSave").addEventListener("click", saveNoteFromModal);
 $("#btnNoteCancel").addEventListener("click", closeNoteModal);
