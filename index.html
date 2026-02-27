@@ -780,14 +780,6 @@
         <button class="btn secondary compact" id="btnNoteClose">Close</button>
       </div>
       <textarea id="noteText" placeholder="Write your note..."></textarea>
-      <div class="modal-row">
-        <label for="noteAnchorType" style="font-weight:600;">Attach to:</label>
-        <select id="noteAnchorType" style="max-width:260px;">
-          <option value="selection">Current selection</option>
-          <option value="heading">Current heading</option>
-          <option value="scroll">Current scroll position</option>
-        </select>
-      </div>
       <div class="modal-row" style="justify-content:flex-end;">
         <button class="btn secondary compact" id="btnNoteCancel">Cancel</button>
         <button class="btn compact" id="btnNoteSave">Save Note</button>
@@ -859,7 +851,6 @@ const docTypeEl = $("#docType");
 const noteModalBackdropEl = $("#noteModalBackdrop");
 const noteModalTitleEl = $("#noteModalTitle");
 const noteTextEl = $("#noteText");
-const noteAnchorTypeEl = $("#noteAnchorType");
 
 let state = loadLibrary();
 let notesOverlay = loadNotesOverlay();
@@ -1072,66 +1063,17 @@ function getCurrentSelectionInfo() {
   };
 }
 
-function getCurrentHeadingAnchor() {
-  const headings = Array.from(previewEl.querySelectorAll('.preview-inner h1, .preview-inner h2, .preview-inner h3'));
-  if (!headings.length) return null;
-  const top = previewEl.getBoundingClientRect().top;
-  let best = headings[0];
-  let bestDist = Infinity;
-  for (const heading of headings) {
-    const dist = Math.abs(heading.getBoundingClientRect().top - top);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = heading;
-    }
-  }
-  return {
-    type: 'heading',
-    selector: getElementSelector(best),
-    quote: (best.textContent || '').trim().slice(0, 180),
-    contextBefore: '',
-    contextAfter: '',
-    scrollTop: previewEl.scrollTop
-  };
-}
-
-function createAnchor(anchorType = 'selection') {
-  if (previewContentType !== 'docx') {
-    return {
-      type: 'scroll',
-      selector: '',
-      quote: '',
-      contextBefore: '',
-      contextAfter: '',
-      scrollTop: previewEl.scrollTop
-    };
-  }
-
-  if (anchorType === 'selection') {
-    const selection = getCurrentSelectionInfo();
-    if (selection) {
-      return {
-        type: 'text-range',
-        selector: selection.selector || selection.heading?.selector || '',
-        quote: selection.selectedText,
-        contextBefore: selection.contextBefore,
-        contextAfter: selection.contextAfter,
-        scrollTop: previewEl.scrollTop
-      };
-    }
-  }
-
-  if (anchorType === 'heading') {
-    const headingAnchor = getCurrentHeadingAnchor();
-    if (headingAnchor) return headingAnchor;
-  }
+function createAnchorFromSelection() {
+  if (previewContentType !== 'docx') return null;
+  const selection = getCurrentSelectionInfo();
+  if (!selection) return null;
 
   return {
-    type: 'scroll',
-    selector: '',
-    quote: '',
-    contextBefore: '',
-    contextAfter: '',
+    type: 'text-range',
+    selector: selection.selector || selection.heading?.selector || '',
+    quote: selection.selectedText,
+    contextBefore: selection.contextBefore,
+    contextAfter: selection.contextAfter,
     scrollTop: previewEl.scrollTop
   };
 }
@@ -1185,17 +1127,16 @@ function renderNotesList() {
   }
 }
 
-function openNoteModal({ mode = 'create', note = null, suggestedAnchorType = 'selection' } = {}) {
+function openNoteModal({ mode = 'create', note = null } = {}) {
   const ctx = getActiveDocContext();
   if (!ctx) {
     alert('Open a document first.');
     return;
   }
 
-  noteEditorState = { mode, noteId: note?.id || null, suggestedAnchorType };
+  noteEditorState = { mode, noteId: note?.id || null, suggestedAnchorType: 'selection' };
   noteModalTitleEl.textContent = mode === 'edit' ? 'Edit Note' : 'New Note';
   noteTextEl.value = note?.text || '';
-  noteAnchorTypeEl.value = note?.anchor?.type === 'heading' ? 'heading' : (note?.anchor?.type === 'scroll' ? 'scroll' : suggestedAnchorType || 'selection');
   noteModalBackdropEl.classList.add('open');
   noteTextEl.focus();
 }
@@ -1221,20 +1162,25 @@ function saveNoteFromModal() {
     return;
   }
 
-  const anchorType = noteAnchorTypeEl.value || 'selection';
-  const anchor = createAnchor(anchorType);
   const stamp = nowISO();
 
   if (noteEditorState.mode === 'edit' && noteEditorState.noteId) {
     const found = notesOverlay.notes.find((n) => n.id === noteEditorState.noteId);
     if (found) {
       found.text = text;
-      found.anchor = anchor;
+      const updatedAnchor = createAnchorFromSelection();
+      if (updatedAnchor) found.anchor = updatedAnchor;
       found.docKey = ctx.docKey;
       found.docTitle = ctx.docTitle;
       found.updatedAtISO = stamp;
     }
   } else {
+    const anchor = createAnchorFromSelection();
+    if (!anchor) {
+      alert('Highlight text in the preview first, then save your note.');
+      return;
+    }
+
     notesOverlay.notes.unshift({
       id: uuid(),
       docKey: ctx.docKey,
@@ -2408,12 +2354,10 @@ $("#importFile").addEventListener("change", (e) => {
 $("#btnCopyText").addEventListener("click", copyPlainText);
 
 btnAddNoteEl.addEventListener("click", () => {
-  const hasSelection = !!getCurrentSelectionInfo();
-  openNoteModal({ mode: 'create', suggestedAnchorType: hasSelection ? 'selection' : 'scroll' });
+  openNoteModal({ mode: 'create' });
 });
 btnNewNoteEl.addEventListener("click", () => {
-  const hasSelection = !!getCurrentSelectionInfo();
-  openNoteModal({ mode: 'create', suggestedAnchorType: hasSelection ? 'selection' : 'scroll' });
+  openNoteModal({ mode: 'create' });
 });
 notesShowAllEl.addEventListener("change", renderNotesList);
 notesHeadEl.addEventListener("click", () => {
