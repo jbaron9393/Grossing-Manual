@@ -155,6 +155,12 @@
     .muted { color: #666; font-size: .85rem; }
     .danger { color: #b00020; font-size: .85rem; }
 
+    .section-break {
+      border: none;
+      border-top: 3px solid #e3e3e3;
+      margin: 22px 0 18px;
+    }
+
     /* Left nav list */
     .nav {
       display: flex;
@@ -481,7 +487,6 @@
   <div class="header">
     <div>
       <h1>Grossing Manual</h1>
-      <small>Upload DOCX → assign category → click left nav to render on the right</small>
     </div>
     <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
       <button class="btn ghost" id="btnExport">Export</button>
@@ -510,7 +515,7 @@
           <div class="nav" id="siteDocsNav"></div>
         </div>
 
-        <hr style="border:none;border-top:1px solid #eee;margin:14px 0;" />
+        <hr class="section-break" />
 
         <div class="row">
           <label for="docFile">Upload a .docx</label>
@@ -586,9 +591,7 @@
       <div class="panel-body" style="display:flex; flex-direction:column; gap:10px;">
         <div class="preview-search">
           <input id="previewSearch" type="text" placeholder="Search within preview..." />
-          <button class="btn secondary compact" id="btnSearchFind">Find</button>
-          <button class="btn secondary compact" id="btnSearchPrev">Prev</button>
-          <button class="btn secondary compact" id="btnSearchNext">Next</button>
+          <button class="btn secondary compact" id="btnSearchFind">Next (Enter)</button>
           <button class="btn secondary compact" id="btnSearchClear">Clear</button>
           <span class="muted" id="searchMeta"></span>
         </div>
@@ -601,7 +604,8 @@
       </div>
 
       <div class="footer-note" id="selectionNote">
-        Nothing selected.
+        Grossing Manual — University of Colorado Department of Pathology<br />
+        Last updated February 2026
       </div>
     </div>
   </div>
@@ -647,7 +651,6 @@ const leftSearchMetaEl = $("#leftSearchMeta");
 const previewEl = $("#preview");
 const previewTitleEl = $("#previewTitle");
 const previewMetaEl = $("#previewMeta");
-const selectionNoteEl = $("#selectionNote");
 const previewSearchEl = $("#previewSearch");
 const searchMetaEl = $("#searchMeta");
 const btnToTopEl = $("#btnToTop");
@@ -1344,7 +1347,6 @@ async function loadDoc(docId) {
 
   previewTitleEl.textContent = d.title || "Preview";
   previewMetaEl.textContent = `${d.category || "Uncategorized"} • added ${new Date(d.addedAtISO).toLocaleString()}`;
-  selectionNoteEl.textContent = `Selected: ${d.title || d.fileName}`;
 
   setPreviewHtml(`<div class="muted">Rendering…</div>`);
 
@@ -1385,7 +1387,6 @@ async function loadSiteDoc(doc) {
 
   previewTitleEl.textContent = doc.title;
   previewMetaEl.textContent = `Library • ${doc.fileName}`;
-  selectionNoteEl.textContent = `Selected bundled doc: ${doc.title}`;
   setPreviewHtml(`<div class="muted">Rendering…</div>`);
 
   const ext = getFileExtension(doc.fileName);
@@ -1537,7 +1538,6 @@ function deleteDoc(docId) {
     activeDocId = null;
     previewTitleEl.textContent = "Preview";
     previewMetaEl.textContent = "";
-    selectionNoteEl.textContent = "Nothing selected.";
     setPreviewHtml(`<div class="muted">Upload a DOCX and click it in the left sidebar.</div>`);
   }
   saveLibrary();
@@ -1719,9 +1719,7 @@ leftSearchEl.addEventListener("input", () => {
 btnToTopEl.addEventListener("click", scrollToTop);
 previewEl.addEventListener("scroll", updateToTopVisibility);
 window.addEventListener("scroll", updateToTopVisibility);
-$("#btnSearchFind").addEventListener("click", runPreviewSearch);
-$("#btnSearchNext").addEventListener("click", () => jumpToSearchMatch(true));
-$("#btnSearchPrev").addEventListener("click", () => jumpToSearchMatch(false));
+$("#btnSearchFind").addEventListener("click", () => jumpToSearchMatch(true));
 $("#btnSearchClear").addEventListener("click", clearPreviewSearch);
 btnClearSearchFloatEl.addEventListener("click", clearPreviewSearch);
 previewSearchEl.addEventListener("input", () => {
@@ -1731,8 +1729,7 @@ previewSearchEl.addEventListener("input", () => {
 previewSearchEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
-    if (e.shiftKey) jumpToSearchMatch(false);
-    else jumpToSearchMatch(true);
+    jumpToSearchMatch(true);
   }
   if (e.key === "Escape" && previewSearchEl.value.trim()) {
     e.preventDefault();
