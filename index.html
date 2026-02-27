@@ -618,6 +618,8 @@ let topButtonHideTimer = null;
 let bundledStats = { docs: 0, categories: 0 };
 let bundledDocs = [];
 let leftSearchQuery = "";
+let leftSearchDocTextCache = new Map();
+let leftSearchIndexing = new Set();
 
 // -------------------- Utilities --------------------
 function uuid() {
@@ -694,12 +696,71 @@ function normalizeSearchValue(value) {
   return (value || "").toString().trim().toLowerCase();
 }
 
+function getLeftSearchDocKey(doc) {
+  if (doc?.path) return `site:${doc.path}`;
+  if (doc?.id) return `local:${doc.id}`;
+  return `local:${doc?.fileName || "unknown"}`;
+}
+
+async function extractRawSearchTextFromArrayBuffer(arrayBuffer) {
+  try {
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return normalizeSearchValue(result?.value || "");
+  } catch {
+    return "";
+  }
+}
+
+async function queueLeftSearchIndexDoc(doc) {
+  const key = getLeftSearchDocKey(doc);
+  if (leftSearchDocTextCache.has(key) || leftSearchIndexing.has(key)) return;
+  leftSearchIndexing.add(key);
+
+  try {
+    let extracted = "";
+    if (doc?.path) {
+      const response = await fetch(doc.path);
+      if (response.ok) {
+        const buffer = await response.arrayBuffer();
+        extracted = await extractRawSearchTextFromArrayBuffer(buffer);
+      }
+    } else if (doc?.docxBase64) {
+      const bytes = bytesFromBase64(doc.docxBase64);
+      extracted = await extractRawSearchTextFromArrayBuffer(bytes.buffer);
+    }
+
+    leftSearchDocTextCache.set(key, extracted);
+  } catch {
+    leftSearchDocTextCache.set(key, "");
+  } finally {
+    leftSearchIndexing.delete(key);
+    if (leftSearchQuery) {
+      renderNav();
+      renderSiteDocsNav(bundledDocs);
+      updateLeftSearchMeta();
+    }
+  }
+}
+
+function queueLeftSearchIndexAll() {
+  for (const doc of bundledDocs) queueLeftSearchIndexDoc(doc);
+  for (const doc of (state.docs || [])) queueLeftSearchIndexDoc(doc);
+}
+
 function matchesLeftSearch(doc) {
   if (!leftSearchQuery) return true;
-  const haystack = [doc.title, doc.fileName, doc.category]
+
+  const metadata = [doc.title, doc.fileName, doc.category]
     .map((value) => (value || "").toString().toLowerCase())
     .join(" ");
-  return haystack.includes(leftSearchQuery);
+  if (metadata.includes(leftSearchQuery)) return true;
+
+  const key = getLeftSearchDocKey(doc);
+  const cached = leftSearchDocTextCache.get(key);
+  if (typeof cached === "string" && cached.includes(leftSearchQuery)) return true;
+  if (cached === undefined) queueLeftSearchIndexDoc(doc);
+
+  return false;
 }
 
 function updateLeftSearchMeta() {
@@ -1262,6 +1323,7 @@ async function loadBundledDocs() {
       }));
 
     bundledDocs = docs;
+    if (leftSearchQuery) queueLeftSearchIndexAll();
     bundledStats = { docs: docs.length, categories: new Set(docs.map((d) => d.category || "Uncategorized")).size };
     setLibraryStatus();
     renderSiteDocsNav(docs);
@@ -1304,6 +1366,7 @@ async function addDocFromUpload() {
   };
 
   state.docs.unshift(doc);
+  if (leftSearchQuery) queueLeftSearchIndexDoc(doc);
   saveLibrary();
 
   // Reset inputs
@@ -1323,6 +1386,8 @@ function deleteDoc(docId) {
   if (!ok) return;
 
   state.docs = state.docs.filter(x => x.id !== docId);
+  leftSearchDocTextCache.delete(getLeftSearchDocKey(d));
+  leftSearchIndexing.delete(getLeftSearchDocKey(d));
   if (activeDocId === docId) {
     activeDocId = null;
     previewTitleEl.textContent = "Preview";
@@ -1378,6 +1443,7 @@ function importLibraryFromFile(file) {
       })).filter(d => d.docxBase64);
 
       state.docs = [...incoming, ...state.docs];
+      if (leftSearchQuery) queueLeftSearchIndexAll();
       saveLibrary();
       renderNav();
       alert(`Imported ${incoming.length} doc(s).`);
@@ -1431,6 +1497,7 @@ $("#importFile").addEventListener("change", (e) => {
 $("#btnCopyText").addEventListener("click", copyPlainText);
 leftSearchEl.addEventListener("input", () => {
   leftSearchQuery = normalizeSearchValue(leftSearchEl.value);
+  if (leftSearchQuery) queueLeftSearchIndexAll();
   renderNav();
   renderSiteDocsNav(bundledDocs);
   updateLeftSearchMeta();
