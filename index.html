@@ -515,6 +515,7 @@
       <div class="panel-body" style="display:flex; flex-direction:column; gap:10px;">
         <div class="preview-search">
           <input id="previewSearch" type="text" placeholder="Search within preview..." />
+          <button class="btn secondary compact" id="btnSearchFind">Find</button>
           <button class="btn secondary compact" id="btnSearchPrev">Prev</button>
           <button class="btn secondary compact" id="btnSearchNext">Next</button>
           <button class="btn secondary compact" id="btnSearchClear">Clear</button>
@@ -899,7 +900,14 @@ function updateSearchMeta() {
   searchMetaEl.textContent = `${activeSearchIndex + 1} / ${searchMatches.length}`;
 }
 
+function runPreviewSearch() {
+  refreshSearchHighlights();
+}
+
 function jumpToSearchMatch(next = true) {
+  if (!searchMatches.length && previewSearchEl.value.trim()) {
+    refreshSearchHighlights();
+  }
   if (!searchMatches.length) return;
 
   searchMatches.forEach((el) => el.classList.remove("active"));
@@ -922,7 +930,8 @@ function refreshSearchHighlights() {
 
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const regex = new RegExp(escaped, "gi");
-  const walker = document.createTreeWalker(previewEl, NodeFilter.SHOW_TEXT, {
+  const searchRoot = previewEl.querySelector(".preview-inner") || previewEl;
+  const walker = document.createTreeWalker(searchRoot, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
       if (!node.parentElement) return NodeFilter.FILTER_REJECT;
@@ -1231,6 +1240,7 @@ $("#btnCopyText").addEventListener("click", copyPlainText);
 btnToTopEl.addEventListener("click", scrollToTop);
 previewEl.addEventListener("scroll", updateToTopVisibility);
 window.addEventListener("scroll", updateToTopVisibility);
+$("#btnSearchFind").addEventListener("click", runPreviewSearch);
 $("#btnSearchNext").addEventListener("click", () => jumpToSearchMatch(true));
 $("#btnSearchPrev").addEventListener("click", () => jumpToSearchMatch(false));
 $("#btnSearchClear").addEventListener("click", () => {
