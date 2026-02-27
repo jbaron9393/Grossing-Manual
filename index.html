@@ -864,7 +864,7 @@ let bundledDocs = [];
 let leftSearchQuery = "";
 let leftSearchDocTextCache = new Map();
 let leftSearchIndexing = new Set();
-let noteEditorState = { mode: "create", noteId: null, suggestedAnchorType: "selection" };
+let noteEditorState = { mode: "create", noteId: null, capturedAnchor: null };
 let previewContentType = "docx";
 
 // -------------------- Utilities --------------------
@@ -1127,14 +1127,14 @@ function renderNotesList() {
   }
 }
 
-function openNoteModal({ mode = 'create', note = null } = {}) {
+function openNoteModal({ mode = 'create', note = null, capturedAnchor = null } = {}) {
   const ctx = getActiveDocContext();
   if (!ctx) {
     alert('Open a document first.');
     return;
   }
 
-  noteEditorState = { mode, noteId: note?.id || null, suggestedAnchorType: 'selection' };
+  noteEditorState = { mode, noteId: note?.id || null, capturedAnchor: capturedAnchor || null };
   noteModalTitleEl.textContent = mode === 'edit' ? 'Edit Note' : 'New Note';
   noteTextEl.value = note?.text || '';
   noteModalBackdropEl.classList.add('open');
@@ -1175,9 +1175,9 @@ function saveNoteFromModal() {
       found.updatedAtISO = stamp;
     }
   } else {
-    const anchor = createAnchorFromSelection();
+    const anchor = noteEditorState.capturedAnchor || createAnchorFromSelection();
     if (!anchor) {
-      alert('Highlight text in the preview first, then save your note.');
+      alert('Highlight text in the preview first, then click Add Note.');
       return;
     }
 
@@ -2354,10 +2354,20 @@ $("#importFile").addEventListener("change", (e) => {
 $("#btnCopyText").addEventListener("click", copyPlainText);
 
 btnAddNoteEl.addEventListener("click", () => {
-  openNoteModal({ mode: 'create' });
+  const capturedAnchor = createAnchorFromSelection();
+  if (!capturedAnchor) {
+    alert('Highlight text in the preview first, then click Add Note.');
+    return;
+  }
+  openNoteModal({ mode: 'create', capturedAnchor });
 });
 btnNewNoteEl.addEventListener("click", () => {
-  openNoteModal({ mode: 'create' });
+  const capturedAnchor = createAnchorFromSelection();
+  if (!capturedAnchor) {
+    alert('Highlight text in the preview first, then click Add Note.');
+    return;
+  }
+  openNoteModal({ mode: 'create', capturedAnchor });
 });
 notesShowAllEl.addEventListener("change", renderNotesList);
 notesHeadEl.addEventListener("click", () => {
