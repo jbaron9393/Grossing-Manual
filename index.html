@@ -74,6 +74,9 @@
       justify-content: space-between;
       gap: 10px;
     }
+    .panel-header > span:first-child {
+      overflow-wrap: anywhere;
+    }
     .panel-body { padding: 14px 16px; overflow: auto; min-height: 0; }
 
     .row { display: grid; gap: 10px; margin-bottom: 12px; }
@@ -145,6 +148,11 @@
       cursor: pointer;
       user-select: none;
     }
+    .cat-head-title {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
     .category > .cat-head:hover { background:#f2f2f2; }
     .cat-count { color:#777; font-weight: 700; font-size: .85rem; }
 
@@ -172,8 +180,41 @@
     .doc-item.active { background:#fff8e7; border-color:#CFB87C; }
 
     .doc-meta { display:flex; flex-direction: column; min-width: 0; }
-    .doc-title { font-weight: 800; font-size: .95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .doc-sub { font-size:.8rem; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .doc-title {
+      font-weight: 800;
+      font-size: .95rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.25;
+    }
+    .doc-sub {
+      font-size:.8rem;
+      color:#666;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.25;
+    }
+
+    .subgroup {
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fcfcfc;
+    }
+    .subgroup + .subgroup {
+      margin-top: 6px;
+    }
+    .subgroup-head {
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #efefef;
+      overflow-wrap: anywhere;
+    }
 
     .doc-actions { display:flex; gap:8px; }
     .icon-btn {
@@ -268,6 +309,14 @@
     body.dark .category > .cat-head,
     body.dark .preview {
       background: #171d26;
+    }
+    body.dark .subgroup {
+      background: #1e2531;
+      border-color: #303947;
+    }
+    body.dark .subgroup-head {
+      color: #b5becc;
+      border-bottom-color: #303947;
     }
     body.dark .category > .cat-head:hover,
     body.dark .doc-item:hover,
@@ -487,6 +536,40 @@ function groupByCategory(docs) {
   return out;
 }
 
+function getSubgroupLabel(doc) {
+  const parts = (doc.fileName || "")
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length < 3) return "";
+  return parts[1];
+}
+
+function groupDocsBySubgroup(items) {
+  const groups = new Map();
+  for (const doc of items) {
+    const subgroup = getSubgroupLabel(doc) || "General";
+    if (!groups.has(subgroup)) groups.set(subgroup, []);
+    groups.get(subgroup).push(doc);
+  }
+
+  return [...groups.entries()].map(([name, docs]) => ({
+    name,
+    docs
+  }));
+}
+
+function toggleCategory(catEl, parentEl) {
+  const isOpening = !catEl.classList.contains("open");
+
+  for (const sibling of parentEl.querySelectorAll(".category.open")) {
+    sibling.classList.remove("open");
+  }
+
+  if (isOpening) catEl.classList.add("open");
+}
+
 function bytesFromBase64(b64) {
   const bin = atob(b64);
   const len = bin.length;
@@ -550,10 +633,10 @@ function renderNav() {
     const head = document.createElement("div");
     head.className = "cat-head";
     head.innerHTML = `
-      <span>${escapeHtml(cat)}</span>
+      <span class="cat-head-title">${escapeHtml(cat)}</span>
       <span class="cat-count">${items.length}</span>
     `;
-    head.addEventListener("click", () => catEl.classList.toggle("open"));
+    head.addEventListener("click", () => toggleCategory(catEl, navEl));
 
     const list = document.createElement("div");
     list.className = "doc-list";
@@ -610,25 +693,40 @@ function renderSiteDocsNav(siteDocs) {
     const head = document.createElement("div");
     head.className = "cat-head";
     head.innerHTML = `
-      <span>${escapeHtml(cat)}</span>
+      <span class="cat-head-title">${escapeHtml(cat)}</span>
       <span class="cat-count">${items.length}</span>
     `;
-    head.addEventListener("click", () => catEl.classList.toggle("open"));
+    head.addEventListener("click", () => toggleCategory(catEl, siteDocsNavEl));
 
     const list = document.createElement("div");
     list.className = "doc-list";
 
-    for (const doc of items) {
-      const item = document.createElement("div");
-      item.className = "doc-item" + (doc.path === activeSiteDocPath ? " active" : "");
-      item.innerHTML = `
-        <div class="doc-meta">
-          <div class="doc-title">${escapeHtml(doc.title)}</div>
-          <div class="doc-sub">${escapeHtml(doc.fileName)}</div>
-        </div>
-      `;
-      item.addEventListener("click", () => loadSiteDoc(doc));
-      list.appendChild(item);
+    const groupedItems = groupDocsBySubgroup(items);
+    for (const subgroup of groupedItems) {
+      const subgroupEl = document.createElement("div");
+      subgroupEl.className = "subgroup";
+
+      if (subgroup.name !== "General") {
+        const subgroupHead = document.createElement("div");
+        subgroupHead.className = "subgroup-head";
+        subgroupHead.textContent = subgroup.name;
+        subgroupEl.appendChild(subgroupHead);
+      }
+
+      for (const doc of subgroup.docs) {
+        const item = document.createElement("div");
+        item.className = "doc-item" + (doc.path === activeSiteDocPath ? " active" : "");
+        item.innerHTML = `
+          <div class="doc-meta">
+            <div class="doc-title">${escapeHtml(doc.title)}</div>
+            <div class="doc-sub">${escapeHtml(doc.fileName)}</div>
+          </div>
+        `;
+        item.addEventListener("click", () => loadSiteDoc(doc));
+        subgroupEl.appendChild(item);
+      }
+
+      list.appendChild(subgroupEl);
     }
 
     catEl.appendChild(head);
