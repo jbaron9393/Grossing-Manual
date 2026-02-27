@@ -19,10 +19,134 @@
   ],
   "files": [
     {
-      "fileName": "Mastectomy Grossing.docx",
+      "fileName": "Breast/Mastectomy Grossing.docx",
       "title": "Mastectomy Grossing",
       "category": "Breast"
+    },
+    {
+      "fileName": "Breast/Breast Sentinel Lymph Node Frozen Worksheet.docx",
+      "title": "Breast Sentinel Lymph Node Frozen Worksheet",
+      "category": "Breast"
+    },
+    {
+      "fileName": "Breast/Breast tissue mammoplasty-gynecomastia-gender affirming.docx",
+      "title": "Breast Tissue Mammoplasty, Gynecomastia, Gender-Affirming",
+      "category": "Breast"
+    },
+    {
+      "fileName": "Breast/Lump-Excisional Biopsy.docx",
+      "title": "Lump Excisional Biopsy",
+      "category": "Breast"
+    },
+    {
+      "fileName": "Breast/Sentinel Lymph Node- Breast.docx",
+      "title": "Sentinel Lymph Node – Breast",
+      "category": "Breast"
+    },
+    {
+      "fileName": "Biopsies (non-derm)/GI Biopsy Headers and Formatting.docx",
+      "title": "GI Biopsy Headers and Formatting",
+      "category": "Biopsies (non-derm)"
+    },
+    {
+      "fileName": "BM-Heme-Lymphoma/Bone marrow Accessioning and Grossing.docx",
+      "title": "Bone Marrow Accessioning and Grossing",
+      "category": "BM-Heme-Lymphoma"
+    },
+    {
+      "fileName": "BM-Heme-Lymphoma/CU Lymphoma Protocol_02-06-2023.pdf",
+      "title": "CU Lymphoma Protocol (02-06-2023)",
+      "category": "BM-Heme-Lymphoma"
+    },
+    {
+      "fileName": "BST/BST grossing info.docx",
+      "title": "BST Grossing Information",
+      "category": "BST"
+    },
+    {
+      "fileName": "BST/BST Photograph policy.docx",
+      "title": "BST Photograph Policy",
+      "category": "BST"
+    },
+    {
+      "fileName": "BST/BST Specimen List.docx",
+      "title": "BST Specimen List",
+      "category": "BST"
+    },
+    {
+      "fileName": "BST/BST.james version v2 fracture.pdf",
+      "title": "BST James Version v2 (Fracture)",
+      "category": "BST"
+    },
+    {
+      "fileName": "BST/BST.james version.pdf",
+      "title": "BST James Version",
+      "category": "BST"
+    },
+    {
+      "fileName": "BST/Updated BST rotation outline (v2).docx",
+      "title": "Updated BST Rotation Outline (v2)",
+      "category": "BST"
+    },
+    {
+      "fileName": "Derm/Mohs.docx",
+      "title": "Mohs",
+      "category": "Derm"
+    },
+    {
+      "fileName": "Derm/Oriented Ellipse.docx",
+      "title": "Oriented Ellipse",
+      "category": "Derm"
+    },
+    {
+      "fileName": "Derm/Shave-Punch Biopsy.docx",
+      "title": "Shave-Punch Biopsy",
+      "category": "Derm"
+    },
+    {
+      "fileName": "Derm/Unoriented Ellipse.docx",
+      "title": "Unoriented Ellipse",
+      "category": "Derm"
+    },
+    {
+      "fileName": "Faxitron/How-to guide.docx",
+      "title": "How-To Guide",
+      "category": "Faxitron"
+    },
+    {
+      "fileName": "Faxitron/Saving Faxitron Images.docx",
+      "title": "Saving Faxitron Images",
+      "category": "Faxitron"
+    },
+    {
+      "fileName": "Frozens/Cancelling a FS block.docx",
+      "title": "Cancelling a Frozen Section Block",
+      "category": "Frozens"
+    },
+    {
+      "fileName": "Frozens/Cryostat troubleshooting.docx",
+      "title": "Cryostat Troubleshooting",
+      "category": "Frozens"
+    },
+    {
+      "fileName": "Frozens/How to add blocks- CoPath.docx",
+      "title": "How to Add Blocks – CoPath",
+      "category": "Frozens"
+    },
+    {
+      "fileName": "Frozens/Printing Frozen Slide Labels.docx",
+      "title": "Printing Frozen Slide Labels",
+      "category": "Frozens"
+    },
+    {
+      "fileName": "Frozens/Responsibilities.docx",
+      "title": "Frozen Section Responsibilities",
+      "category": "Frozens"
+    },
+    {
+      "fileName": "Frozens/Stainline.docx",
+      "title": "Stainline",
+      "category": "Frozens"
     }
-
   ]
 }
