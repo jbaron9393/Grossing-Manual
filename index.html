@@ -1360,7 +1360,7 @@ previewSearchEl.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();
     if (e.shiftKey) jumpToSearchMatch(false);
-    else runPreviewSearch();
+    else jumpToSearchMatch(true);
   }
 });
 
