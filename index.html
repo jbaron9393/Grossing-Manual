@@ -2683,6 +2683,8 @@ function updateToTopVisibility() {
   if (topButtonHideTimer) clearTimeout(topButtonHideTimer);
   if (floatingSearchHideTimer) clearTimeout(floatingSearchHideTimer);
 
+  updateFloatingSearchVisibility();
+
   if (!isScrolling) {
     floatingSearchTransientVisible = false;
     updateFloatingSearchVisibility();
