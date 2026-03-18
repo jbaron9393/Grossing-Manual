@@ -566,39 +566,6 @@
       min-width: 0;
       flex: 1;
     }
-    .search-float {
-      bottom: 112px;
-      padding: 7px 11px;
-      font-size: .82rem;
-    }
-    .floating-search-panel {
-      position: fixed;
-      right: 24px;
-      bottom: 156px;
-      z-index: 51;
-      width: min(360px, calc(100vw - 32px));
-      background: rgba(255,255,255,.96);
-      border: 1px solid rgba(207,184,124,.9);
-      border-radius: 14px;
-      box-shadow: 0 14px 32px rgba(0,0,0,.18);
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      backdrop-filter: blur(10px);
-    }
-    .floating-search-panel.hidden {
-      display: none;
-    }
-    .floating-search-panel-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .floating-search-panel-row input {
-      min-width: 0;
-      flex: 1;
-    }
     .note-category-chip {
       font-size: .72rem;
       font-weight: 700;
@@ -1005,6 +972,8 @@ let activeSiteDocPath = null;
 let searchMatchGroups = [];
 let activeSearchIndex = -1;
 let topButtonHideTimer = null;
+let floatingSearchHideTimer = null;
+let floatingSearchTransientVisible = false;
 let bundledStats = { docs: 0, categories: 0 };
 let bundledDocs = [];
 let bundledCategoryCanonical = new Map([[normalizeCategory("Uncategorized"), "Uncategorized"]]);
@@ -2163,9 +2132,11 @@ function updateFloatingSearchMeta() {
 function updateFloatingSearchVisibility() {
   const isScrolling = window.scrollY > 0 || previewEl.scrollTop > 0;
   const hasQuery = !!previewSearchEl.value.trim();
-  const showPanel = isScrolling && (floatingSearchPinnedOpen || hasQuery);
+  const keepPanelOpen = floatingSearchPinnedOpen || hasQuery;
+  const showLauncher = isScrolling && (floatingSearchTransientVisible || keepPanelOpen);
+  const showPanel = isScrolling && keepPanelOpen;
 
-  btnSearchFloatEl.classList.toggle("hidden", !isScrolling);
+  btnSearchFloatEl.classList.toggle("hidden", !showLauncher);
   floatingSearchPanelEl.classList.toggle("hidden", !showPanel);
   floatingSearchPanelEl.setAttribute("aria-hidden", showPanel ? "false" : "true");
   btnSearchFloatEl.textContent = "🔎 Search";
@@ -2710,17 +2681,27 @@ function updateToTopVisibility() {
   const isScrolling = window.scrollY > 0 || previewEl.scrollTop > 0;
 
   if (topButtonHideTimer) clearTimeout(topButtonHideTimer);
+  if (floatingSearchHideTimer) clearTimeout(floatingSearchHideTimer);
 
   updateFloatingSearchVisibility();
 
   if (!isScrolling) {
+    floatingSearchTransientVisible = false;
+    updateFloatingSearchVisibility();
     btnToTopEl.classList.add("hidden");
     return;
   }
 
+  floatingSearchTransientVisible = true;
+  updateFloatingSearchVisibility();
+
   btnToTopEl.classList.remove("hidden");
   topButtonHideTimer = setTimeout(() => {
     btnToTopEl.classList.add("hidden");
+  }, 900);
+  floatingSearchHideTimer = setTimeout(() => {
+    floatingSearchTransientVisible = false;
+    updateFloatingSearchVisibility();
   }, 900);
 }
 
