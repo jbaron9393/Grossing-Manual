@@ -1360,7 +1360,9 @@ const MAMMOTH_SCRIPT_SOURCES = [
   "./vendor/mammoth.browser.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
   "https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js",
-  "https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"
+  "https://cdn.jsdelivr.net/npm/mammoth@1.6.0/browser/mammoth.browser.min.js",
+  "https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js",
+  "https://unpkg.com/mammoth@1.6.0/browser/mammoth.browser.min.js"
 ];
 
 // -------------------- Utilities --------------------
@@ -1452,7 +1454,14 @@ function resolveBundledAssetPath(path) {
   if (/^(?:[a-z]+:)?\/\//i.test(cleanPath) || cleanPath.startsWith("data:")) return cleanPath;
   return cleanPath
     .split("/")
-    .map((segment, index) => (index === 0 && /^[.]{1,2}$/.test(segment)) ? segment : encodeURIComponent(segment))
+    .map((segment, index) => {
+      if (index === 0 && /^[.]{1,2}$/.test(segment)) return segment;
+      try {
+        return encodeURIComponent(decodeURIComponent(segment));
+      } catch {
+        return encodeURIComponent(segment);
+      }
+    })
     .join("/");
 }
 
