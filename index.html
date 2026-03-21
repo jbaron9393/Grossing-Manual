@@ -548,10 +548,6 @@
       transform: translateY(-50%);
       padding: 14px 8px;
       font-size: .82rem;
-      border-radius: 14px 0 0 14px;
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
-      letter-spacing: .04em;
     }
     .floating-search-panel {
       position: fixed;
@@ -3267,20 +3263,6 @@ btnFloatingSearchFindEl.addEventListener("click", () => {
   previewSearchEl.value = floatingPreviewSearchEl.value;
   floatingSearchPinnedOpen = true;
   runPreviewSearch();
-});
-btnFloatingSearchPrevEl.addEventListener("click", () => {
-  const nextQuery = floatingPreviewSearchEl.value;
-  const queryChanged = previewSearchEl.value !== nextQuery;
-  previewSearchEl.value = nextQuery;
-
-  floatingSearchPinnedOpen = true;
-  if (queryChanged) {
-    runPreviewSearch();
-    return;
-  }
-
-  jumpToSearchMatch(false);
-  updateFloatingSearchVisibility();
 });
 btnFloatingSearchPrevEl.addEventListener("click", () => {
   const nextQuery = floatingPreviewSearchEl.value;
