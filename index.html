@@ -2522,6 +2522,7 @@ function syncFloatingSearchInput() {
 function updateFloatingSearchMeta() {
   if (!floatingSearchMetaEl) return;
   floatingSearchMetaEl.textContent = searchMetaEl.textContent || "Type to highlight matches.";
+  syncFloatingSearchInputWidth(previewSearchEl.value);
 }
 
 function hasActivePreviewDocument() {
@@ -3296,6 +3297,7 @@ previewSearchEl.addEventListener("input", () => {
 });
 floatingPreviewSearchEl.addEventListener("input", () => {
   floatingSearchPinnedOpen = true;
+  syncFloatingSearchInputWidth(floatingPreviewSearchEl.value);
   previewSearchEl.value = floatingPreviewSearchEl.value;
   refreshSearchHighlights(false);
   updateFloatingSearchVisibility();
