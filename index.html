@@ -3307,7 +3307,7 @@ floatingPreviewSearchEl.addEventListener("keydown", (e) => {
     e.preventDefault();
     floatingSearchPinnedOpen = true;
     previewSearchEl.value = floatingPreviewSearchEl.value;
-    runPreviewSearch();
+    jumpToSearchMatch(true);
     updateFloatingSearchVisibility();
   }
   if (e.key === "Escape") {
