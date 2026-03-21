@@ -3042,8 +3042,12 @@ function updateToTopVisibility() {
     btnToTopEl.classList.add("hidden");
     return;
   }
+}
 
   btnToTopEl.classList.remove("hidden");
+  floatingSearchTransientVisible = true;
+  updateFloatingSearchVisibility();
+
   topButtonHideTimer = setTimeout(() => {
     btnToTopEl.classList.add("hidden");
   }, 900);
