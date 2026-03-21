@@ -2415,6 +2415,33 @@ function setPreviewHtml(html, { objectUrl = null } = {}) {
   updateAddNoteButtonState();
 }
 
+function clearPageHash() {
+  if (!window.location.hash) return;
+  history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+}
+
+function findPreviewAnchorTarget(hash) {
+  const anchorId = (hash || "").replace(/^#/, "").trim();
+  if (!anchorId) return null;
+
+  const safeId = window.CSS?.escape
+    ? CSS.escape(anchorId)
+    : anchorId.replace(/[^a-zA-Z0-9_-]/g, (char) => `\\${char}`);
+  return previewEl.querySelector(`#${safeId}, a[name="${safeId}"]`);
+}
+
+function handlePreviewAnchorNavigation(anchor) {
+  const href = anchor?.getAttribute("href") || "";
+  if (!href.startsWith("#")) return false;
+
+  const target = findPreviewAnchorTarget(href);
+  clearPageHash();
+  if (!target) return true;
+
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  return true;
+}
+
 function renderBundledFileFallback(doc, reason = "") {
   const message = reason
     ? `<div class="danger" style="margin-bottom:10px;">${escapeHtml(reason)}</div>`
@@ -3121,6 +3148,12 @@ document.addEventListener("selectionchange", () => {
 });
 previewEl.addEventListener("mouseup", updateAddNoteButtonState);
 previewEl.addEventListener("keyup", updateAddNoteButtonState);
+previewEl.addEventListener("click", (e) => {
+  const anchor = e.target.closest("a[href]");
+  if (!anchor || !previewEl.contains(anchor)) return;
+  if (!handlePreviewAnchorNavigation(anchor)) return;
+  e.preventDefault();
+});
 leftSearchEl.addEventListener("input", () => {
   leftSearchQuery = normalizeSearchValue(leftSearchEl.value);
   if (leftSearchQuery) queueLeftSearchIndexAll();
@@ -3203,6 +3236,7 @@ setLibraryStatus();
 loadBundledDocs();
 setTheme(localStorage.getItem(THEME_KEY) || "light");
 updateToTopVisibility();
+clearPageHash();
 syncFloatingSearchInput();
 updateFloatingSearchMeta();
 updateFloatingSearchVisibility();
