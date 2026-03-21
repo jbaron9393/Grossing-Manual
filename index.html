@@ -550,18 +550,20 @@
       position: fixed;
       top: 50%;
       right: 24px;
-      bottom: 68px;
+      bottom: auto;
       z-index: 51;
-      width: min(190px, calc(100vw - 32px));
+      width: fit-content;
+      max-width: calc(100vw - 32px);
       background: rgba(255,255,255,.96);
       border: 1px solid rgba(207,184,124,.9);
       border-radius: 12px;
       box-shadow: 0 10px 24px rgba(0,0,0,.16);
       padding: 8px;
-      display: flex;
+      display: inline-flex;
       flex-direction: column;
       gap: 4px;
       backdrop-filter: blur(10px);
+      transform: translateY(-50%);
     }
     .floating-search-panel.hidden {
       display: none;
@@ -570,11 +572,15 @@
       display: flex;
       gap: 6px;
       align-items: center;
+      width: fit-content;
+      max-width: 100%;
     }
     .floating-search-actions {
       display: flex;
       gap: 4px;
       flex-wrap: wrap;
+      width: fit-content;
+      max-width: 100%;
     }
     .floating-search-actions .btn.compact {
       padding: 4px 7px;
@@ -584,8 +590,9 @@
       font-size: .76rem;
     }
     .floating-search-panel-row input {
-      min-width: 0;
-      flex: 1;
+      min-width: 10ch;
+      width: clamp(10ch, var(--floating-search-input-width, 24ch), calc(100vw - 64px));
+      flex: 0 1 auto;
     }
     .note-category-chip {
       font-size: .72rem;
@@ -704,7 +711,8 @@
         bottom: 112px;
         right: 16px;
         transform: none;
-        width: min(360px, calc(100vw - 32px));
+        width: fit-content;
+        max-width: calc(100vw - 32px);
       }
     }
     body.dark .note-category-chip {
@@ -1334,6 +1342,13 @@ let notesOverlay = loadNotesOverlay();
 let activeDocId = null;
 let activeSiteDocPath = null;
 let searchMatchGroups = [];
+
+function syncFloatingSearchInputWidth(value) {
+  if (!floatingPreviewSearchEl) return;
+  const basis = (value || floatingPreviewSearchEl.placeholder || "").trim();
+  const width = Math.min(Math.max(basis.length + 1, 10), 28);
+  floatingPreviewSearchEl.style.setProperty("--floating-search-input-width", `${width}ch`);
+}
 let activeSearchIndex = -1;
 let topButtonHideTimer = null;
 let floatingSearchTransientVisible = false;
@@ -2517,6 +2532,7 @@ function syncFloatingSearchInput() {
 function updateFloatingSearchMeta() {
   if (!floatingSearchMetaEl) return;
   floatingSearchMetaEl.textContent = searchMetaEl.textContent || "Type to highlight matches.";
+  syncFloatingSearchInputWidth(previewSearchEl.value);
 }
 
 function hasActivePreviewDocument() {
@@ -3288,6 +3304,7 @@ previewSearchEl.addEventListener("input", () => {
 });
 floatingPreviewSearchEl.addEventListener("input", () => {
   floatingSearchPinnedOpen = true;
+  syncFloatingSearchInputWidth(floatingPreviewSearchEl.value);
   previewSearchEl.value = floatingPreviewSearchEl.value;
   refreshSearchHighlights(false);
   updateFloatingSearchVisibility();
