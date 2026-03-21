@@ -3282,6 +3282,20 @@ btnFloatingSearchPrevEl.addEventListener("click", () => {
   jumpToSearchMatch(false);
   updateFloatingSearchVisibility();
 });
+btnFloatingSearchPrevEl.addEventListener("click", () => {
+  const nextQuery = floatingPreviewSearchEl.value;
+  const queryChanged = previewSearchEl.value !== nextQuery;
+  previewSearchEl.value = nextQuery;
+
+  floatingSearchPinnedOpen = true;
+  if (queryChanged) {
+    runPreviewSearch();
+    return;
+  }
+
+  jumpToSearchMatch(false);
+  updateFloatingSearchVisibility();
+});
 btnFloatingSearchClearEl.addEventListener("click", clearPreviewSearch);
 previewSearchEl.addEventListener("input", () => {
   refreshSearchHighlights(false);
