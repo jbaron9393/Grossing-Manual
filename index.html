@@ -985,6 +985,7 @@ let leftSearchIndexing = new Set();
 let noteEditorState = { mode: "create", noteId: null, capturedAnchor: null };
 let previewContentType = "docx";
 let activePreviewObjectUrl = null;
+let floatingSearchPinnedOpen = false;
 
 // -------------------- Utilities --------------------
 function uuid() {
@@ -2165,6 +2166,7 @@ function updateSearchMeta() {
 }
 
 function runPreviewSearch() {
+  floatingSearchPinnedOpen = true;
   refreshSearchHighlights(true);
   updateFloatingSearchVisibility();
 }
