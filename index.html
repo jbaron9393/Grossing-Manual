@@ -6,9 +6,6 @@
   <title>Grossing Manual</title>
   <link rel="icon" type="image/svg+xml" href="./blood-drop.svg" />
 
-  <!-- Mammoth (DOCX -> HTML in browser) -->
-  <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
-
   <style>
     /* --- Lightweight "cap_synoptic_generator.html"-ish layout: header + 2 panels --- */
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1441,6 +1438,69 @@ function inferMimeTypeFromFileName(fileName) {
   return "application/octet-stream";
 }
 
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[data-src="${src}"]`);
+    if (existing) {
+      existing.addEventListener("load", resolve, { once: true });
+      existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+      if (existing.dataset.loaded === "true") resolve();
+      return;
+    }
+
+    const script = document.createElement("script");
+    let settled = false;
+    const finish = (handler) => (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      handler(value);
+    };
+    const timeoutId = window.setTimeout(() => {
+      script.remove();
+      finish(reject)(new Error(`Timed out loading ${src}`));
+    }, MAMMOTH_SCRIPT_TIMEOUT_MS);
+
+    script.src = src;
+    script.async = true;
+    script.dataset.src = src;
+    script.onload = finish(() => {
+      script.dataset.loaded = "true";
+      resolve();
+    });
+    script.onerror = finish(() => reject(new Error(`Failed to load ${src}`)));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureMammothLoaded() {
+  if (window.mammoth) return window.mammoth;
+  if (mammothLoadPromise) return mammothLoadPromise;
+
+  mammothLoadPromise = (async () => {
+    const errors = [];
+
+    for (const src of MAMMOTH_SCRIPT_SOURCES) {
+      try {
+        await loadScriptOnce(src);
+        if (window.mammoth) return window.mammoth;
+        errors.push(`Loaded ${src} but Mammoth was unavailable.`);
+      } catch (error) {
+        errors.push(error?.message || String(error));
+      }
+    }
+
+    throw new Error(`Unable to load the DOCX rendering library. ${errors.join(" ")}`);
+  })();
+
+  try {
+    return await mammothLoadPromise;
+  } catch (error) {
+    mammothLoadPromise = null;
+    throw error;
+  }
+}
+
 function normalizeLibraryDoc(doc) {
   const normalizedType = getDocType(doc);
   const fileName = (doc?.fileName || "").toString();
@@ -1996,7 +2056,8 @@ function getLeftSearchDocKey(doc) {
 
 async function extractRawSearchTextFromArrayBuffer(arrayBuffer) {
   try {
-    const result = await mammoth.extractRawText({ arrayBuffer });
+    const mammothApi = await ensureMammothLoaded();
+    const result = await mammothApi.extractRawText({ arrayBuffer });
     return normalizeSearchValue(result?.value || "");
   } catch {
     return "";
@@ -2249,9 +2310,11 @@ async function renderDocxToHtmlWithCache(doc, loadBuffer) {
     const buffer = await loadBuffer();
     if (!buffer?.byteLength) throw new Error('Document appears to be empty.');
 
+    const mammothApi = await ensureMammothLoaded();
+
     await nextPaint();
 
-    const result = await mammoth.convertToHtml(
+    const result = await mammothApi.convertToHtml(
       { arrayBuffer: buffer },
       MAMMOTH_OPTIONS
     );
@@ -3455,6 +3518,9 @@ document.addEventListener("click", (e) => {
 renderUnifiedNav();
 setLibraryStatus();
 loadBundledDocs();
+ensureMammothLoaded().catch((error) => {
+  console.warn("DOCX renderer failed to load.", error);
+});
 setTheme(localStorage.getItem(THEME_KEY) || "light");
 hideFloatingScrollButtons();
 clearPageHash();
