@@ -1353,6 +1353,9 @@ let leftSearchIndexing = new Set();
 let noteEditorState = { mode: "create", noteId: null, capturedAnchor: null };
 let previewContentType = "docx";
 let activePreviewObjectUrl = null;
+let docRenderCache = new Map();
+let docRenderInFlight = new Map();
+let uploadedFileBytesCache = new Map();
 
 // -------------------- Utilities --------------------
 function uuid() {
@@ -2147,6 +2150,56 @@ function bytesFromBase64(b64) {
   return bytes;
 }
 
+function getRenderCacheKey(doc) {
+  if (doc?.path) return `site:${doc.path}`;
+  if (doc?.id) return `local:${doc.id}`;
+  return `doc:${doc?.fileName || "unknown"}`;
+}
+
+function getCachedUploadedBytes(doc) {
+  const key = getRenderCacheKey(doc);
+  if (!uploadedFileBytesCache.has(key)) {
+    uploadedFileBytesCache.set(key, bytesFromBase64(doc.fileBase64 || doc.docxBase64 || ""));
+  }
+  return uploadedFileBytesCache.get(key);
+}
+
+function nextPaint() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function renderDocxToHtmlWithCache(doc, loadBuffer) {
+  const key = getRenderCacheKey(doc);
+  if (docRenderCache.has(key)) return docRenderCache.get(key);
+  if (docRenderInFlight.has(key)) return docRenderInFlight.get(key);
+
+  const renderPromise = (async () => {
+    const buffer = await loadBuffer();
+    if (!buffer?.byteLength) throw new Error('Document appears to be empty.');
+
+    await nextPaint();
+
+    const result = await mammoth.convertToHtml(
+      { arrayBuffer: buffer },
+      MAMMOTH_OPTIONS
+    );
+
+    const rendered = {
+      html: renderOutputRichText(result.value || "") || '<div class="muted">No content.</div>',
+      messages: result.messages || []
+    };
+    docRenderCache.set(key, rendered);
+    return rendered;
+  })();
+
+  docRenderInFlight.set(key, renderPromise);
+  try {
+    return await renderPromise;
+  } finally {
+    docRenderInFlight.delete(key);
+  }
+}
+
 function base64FromArrayBuffer(buf) {
   const bytes = new Uint8Array(buf);
   let bin = "";
@@ -2774,7 +2827,7 @@ async function loadDoc(docId) {
 
   setPreviewHtml(`<div class="muted">Rendering…</div>`);
 
-  const bytes = bytesFromBase64(d.fileBase64 || d.docxBase64 || "");
+  const bytes = getCachedUploadedBytes(d);
   if (!bytes.byteLength) {
     setPreviewHtml(`<div class="danger">This uploaded file appears empty.</div>`);
     return;
@@ -2793,25 +2846,17 @@ async function loadDoc(docId) {
   }
 
   try {
-    const result = await mammoth.convertToHtml(
-      { arrayBuffer: bytes.buffer },
-      MAMMOTH_OPTIONS
-    );
-
-    // Mammoth returns { value: "<p>...</p>", messages: [...] }
-    const html = renderOutputRichText(result.value || "");
-    const messages = result.messages || [];
-
-    const msgHtml = messages.length
+    const rendered = await renderDocxToHtmlWithCache(d, async () => bytes.buffer);
+    const msgHtml = rendered.messages.length
       ? `<details style="margin-top:10px;">
-          <summary class="muted">Conversion notes (${messages.length})</summary>
+          <summary class="muted">Conversion notes (${rendered.messages.length})</summary>
           <ul style="margin:8px 0 0 18px;">
-            ${messages.map(m => `<li class="muted">${escapeHtml(m.message || JSON.stringify(m))}</li>`).join("")}
+            ${rendered.messages.map(m => `<li class="muted">${escapeHtml(m.message || JSON.stringify(m))}</li>`).join("")}
           </ul>
         </details>`
       : "";
 
-    setPreviewHtml(html + msgHtml);
+    setPreviewHtml(rendered.html + msgHtml);
   } catch (e) {
     setPreviewHtml(`<div class="danger">Failed to render file: ${escapeHtml(e?.message || String(e))}</div>`);
   }
@@ -2841,20 +2886,12 @@ async function loadSiteDoc(doc) {
   }
 
   try {
-    const response = await fetch(doc.path);
-    if (!response.ok) throw new Error(`Failed to load ${doc.fileName} (${response.status})`);
-
-    const buffer = await response.arrayBuffer();
-    if (!buffer.byteLength) {
-      renderBundledFileFallback(doc, `"${doc.title}" appears to be empty.`);
-      return;
-    }
-
-    const result = await mammoth.convertToHtml(
-      { arrayBuffer: buffer },
-      MAMMOTH_OPTIONS
-    );
-    setPreviewHtml(renderOutputRichText(result.value || "") || '<div class="muted">No content.</div>');
+    const rendered = await renderDocxToHtmlWithCache(doc, async () => {
+      const response = await fetch(doc.path);
+      if (!response.ok) throw new Error(`Failed to load ${doc.fileName} (${response.status})`);
+      return response.arrayBuffer();
+    });
+    setPreviewHtml(rendered.html);
   } catch (e) {
     renderBundledFileFallback(doc, `Failed to render bundled DOCX: ${e?.message || String(e)}`);
   }
