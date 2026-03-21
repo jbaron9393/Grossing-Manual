@@ -1293,8 +1293,6 @@ let activeSiteDocPath = null;
 let searchMatchGroups = [];
 let activeSearchIndex = -1;
 let topButtonHideTimer = null;
-let floatingSearchHideTimer = null;
-let floatingSearchTransientVisible = false;
 let floatingSearchPinnedOpen = false;
 let bundledStats = { docs: 0, categories: 0 };
 let bundledDocs = [];
@@ -2483,7 +2481,7 @@ function updateFloatingSearchVisibility() {
   const showLauncher = floatingSearchTransientVisible || floatingSearchPinnedOpen || panelFocused || hasQuery;
   const showPanel = floatingSearchPinnedOpen || (showLauncher && (hasQuery || panelFocused));
 
-  btnSearchFloatEl.classList.toggle("hidden", !showLauncher);
+  btnSearchFloatEl.classList.remove("hidden");
   floatingSearchPanelEl.classList.toggle("hidden", !showPanel);
   floatingSearchPanelEl.setAttribute("aria-hidden", showPanel ? "false" : "true");
 }
@@ -3045,7 +3043,7 @@ function hideFloatingScrollButtons() {
 
 function updateToTopVisibility() {
   if (topButtonHideTimer) clearTimeout(topButtonHideTimer);
-  if (floatingSearchHideTimer) clearTimeout(floatingSearchHideTimer);
+  updateFloatingSearchVisibility();
 
   btnToTopEl.classList.remove("hidden");
   floatingSearchTransientVisible = true;
@@ -3053,10 +3051,6 @@ function updateToTopVisibility() {
 
   topButtonHideTimer = setTimeout(() => {
     btnToTopEl.classList.add("hidden");
-  }, 900);
-  floatingSearchHideTimer = setTimeout(() => {
-    floatingSearchTransientVisible = false;
-    updateFloatingSearchVisibility();
   }, 900);
 }
 
