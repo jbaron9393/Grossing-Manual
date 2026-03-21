@@ -2479,7 +2479,7 @@ function updateFloatingSearchVisibility() {
   const panelFocused = floatingSearchPanelEl.matches(":focus-within");
   const showPanel = floatingSearchPinnedOpen || panelFocused;
 
-  btnSearchFloatEl.classList.remove("hidden");
+  btnSearchFloatEl.classList.toggle("hidden", !showLauncher);
   floatingSearchPanelEl.classList.toggle("hidden", !showPanel);
   floatingSearchPanelEl.setAttribute("aria-hidden", showPanel ? "false" : "true");
 }
