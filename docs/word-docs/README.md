@@ -33,6 +33,7 @@ The site supports these file types:
 - Word documents: `.docx`
 - PDFs: `.pdf`
 - Images: `.jpg`, `.jpeg`, `.png`
+- Videos: `.mp4`
 
 ## Option 1: Edit or Replace an Existing Document
 
@@ -114,9 +115,9 @@ to:
 
 Notice that the `title` did not have to change. The `title` is what people see on the website. The `fileName` is where the website finds the file.
 
-## Option 3: Add a New Document
+## Option 3: Add a New Document or Video
 
-Use these steps when you want to add a brand-new document to the website.
+Use these steps when you want to add a brand-new document, PDF, image, or MP4 video to the website.
 
 1. Decide which category/folder the document belongs in.
    - Example folders include `Breast`, `Frozens`, `GI 1,2&3`, `GYN-OB 1&2/GYN1`, and `Heart`.
@@ -147,6 +148,20 @@ then add this entry to the `files` list in `index.json`:
 }
 ```
 
+If you add an MP4 video instead, use the same pattern:
+
+```text
+docs/word-docs/Frozens/Cryostat Cleaning Video.mp4
+```
+
+```json
+{
+  "fileName": "Frozens/Cryostat Cleaning Video.mp4",
+  "title": "Cryostat Cleaning Video",
+  "category": "Frozens"
+}
+```
+
 ## Understanding `fileName`, `title`, and `category`
 
 Every document entry in `index.json` usually looks like this:
@@ -164,7 +179,7 @@ Every document entry in `index.json` usually looks like this:
 This is the exact location of the file inside `docs/word-docs/`.
 
 - It must include the folder name if the file is inside a folder.
-- It must include the full file name and extension, such as `.docx` or `.pdf`.
+- It must include the full file name and extension, such as `.docx`, `.pdf`, or `.mp4`.
 - Capital letters, spaces, punctuation, and spelling must match the real file exactly.
 
 ### `title`
@@ -218,13 +233,19 @@ Then add this entry to the `files` list:
 }
 ```
 
+## Important Note About MP4 Videos and Mammoth
+
+Mammoth is the tool the website uses to turn Word `.docx` files into readable HTML previews. Mammoth only works with Word documents; it cannot read or convert `.mp4` videos.
+
+MP4 files can still be uploaded to GitHub and listed in `index.json`. The website will show them with a normal video player instead of sending them through Mammoth.
+
 ## Quick Checklist Before You Finish
 
 Before saving your changes, check these items:
 
 - The document is inside `docs/word-docs/` or one of its folders.
 - The document file name in `index.json` matches the real file name exactly.
-- The file extension is included, such as `.docx`, `.pdf`, `.jpg`, `.jpeg`, or `.png`.
+- The file extension is included, such as `.docx`, `.pdf`, `.jpg`, `.jpeg`, `.png`, or `.mp4`.
 - The `title` is spelled the way you want it to appear on the website.
 - The `category` is spelled the same way everywhere it is used.
 - Commas are correct in `index.json`.
@@ -237,6 +258,7 @@ Avoid these mistakes:
 - Renaming a file but not updating `index.json`.
 - Moving a file to a different folder but not updating `index.json`.
 - Typing `.doc` instead of `.docx`.
+- Expecting Mammoth to process `.mp4` videos. Mammoth only processes `.docx`; videos use the browser video player.
 - Forgetting the folder name in `fileName`.
 - Adding extra spaces at the beginning or end of a file name.
 - Changing a category name in one place but not the other.
