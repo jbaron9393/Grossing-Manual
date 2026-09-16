@@ -1,11 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>UCH Grossing Manual</title>
+
   <style>
     body {
       margin: 0;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -28,12 +32,12 @@
 
     .container {
       max-width: 650px;
-      padding: 40px;
+      padding: 40px 25px;
     }
 
     h1 {
       font-size: 36px;
-      margin-bottom: 12px;
+      margin: 0 0 12px 0;
       color: #000000;
     }
 
@@ -45,47 +49,72 @@
       border-radius: 2px;
     }
 
-    .unavailable {
-      font-size: 20px;
+    .moved {
+      font-size: 21px;
+      font-weight: bold;
       color: #434343;
-      margin-bottom: 30px;
+      margin-bottom: 18px;
     }
 
     .redirect {
-      font-size: 16px;
+      font-size: 17px;
       color: #434343;
       line-height: 1.6;
+      margin-bottom: 28px;
     }
 
-    a {
+    .button {
+      display: inline-block;
+      background-color: #CFB87C;
       color: #000000;
+      font-size: 16px;
       font-weight: bold;
-      text-decoration-color: #CFB87C;
-      text-decoration-thickness: 2px;
-      text-underline-offset: 4px;
+      text-decoration: none;
+      padding: 14px 24px;
+      border-radius: 6px;
+      transition: background-color 0.2s ease;
     }
 
-    a:hover {
+    .button:hover {
+      background-color: #bcbcbc;
+    }
+
+    .note {
+      margin-top: 28px;
+      font-size: 13px;
       color: #434343;
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
+
+  <main class="container">
+
     <h1>UCH Grossing Manual</h1>
+
     <div class="gold-line"></div>
 
-    <p class="unavailable">
-      This site is temporarily unavailable.
+    <p class="moved">
+      The UCH Grossing Manual has moved.
     </p>
 
     <p class="redirect">
-      Please access the UCH Grossing Manual at:<br>
-      <a href="https://gross-pathology-manual-uch.github.io/Path/">
-        https://gross-pathology-manual-uch.github.io/Path/
-      </a>
+      Moving forward, please access the manual at its new location.
     </p>
-  </div>
+
+    <a
+      class="button"
+      href="https://gross-pathology-manual-uch.github.io/Path/"
+    >
+      Access the UCH Grossing Manual
+    </a>
+
+    <p class="note">
+      Please update any saved bookmarks to the new site.
+    </p>
+
+  </main>
+
 </body>
 </html>
